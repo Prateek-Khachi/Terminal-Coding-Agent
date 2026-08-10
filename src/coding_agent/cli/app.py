@@ -1,5 +1,7 @@
 import typer
 from rich.console import Console
+from coding_agent.config import get_settings
+from pathlib import Path
 
 console = Console()
 
@@ -20,4 +22,28 @@ def version():
 @app.command()
 def doctor():
     """Check whether the coding agent environment is configured correctly."""
-    console.print("[bold green]✓ Coding Agent is running[/bold green]")
+
+    settings = get_settings()
+
+    console.print("[bold]Terminal Coding Agent — Environment Check[/bold]\n")
+
+    # Configuration
+    console.print("[green]✓[/green] Configuration loaded")
+
+    # Workspace
+    workspace = Path(settings.workspace).resolve()
+
+    if workspace.exists() and workspace.is_dir():
+        console.print(
+            f"[green]✓[/green] Workspace accessible: {workspace}"
+        )
+    else:
+        console.print(
+            f"[red]✗[/red] Workspace not accessible: {workspace}"
+        )
+
+    # API key
+    if settings.openai_api_key:
+        console.print("[green]✓[/green] OpenAI API key configured")
+    else:
+        console.print("[yellow]⚠[/yellow] OpenAI API key not configured")
