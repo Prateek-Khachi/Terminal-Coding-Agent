@@ -2,10 +2,8 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
 class Settings(BaseSettings):
-    """Application configuration."""
-
-    model: str = "gpt-4o-mini"
-    openai_api_key: str | None = None
+    gemini_api_key: str | None = None
+    model: str = "gemini-3.6-flash"
     workspace: str = "."
     max_iterations: int = 20
     debug: bool = False
