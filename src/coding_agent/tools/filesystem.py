@@ -112,3 +112,134 @@ class ReadFileTool(Tool):
             "path": path,
             "content": content,
         }
+
+class WriteFileTool(Tool):
+    """Write text content to a file inside the workspace."""
+
+    name = "write_file"
+    description = "Write text content to a file inside the workspace."
+
+    def execute(self, path: str, content: str) -> dict[str, Any]:
+        """Write content to a file."""
+
+        settings = get_settings()
+
+        workspace = Path(settings.workspace).resolve()
+        target = (workspace / path).resolve()
+
+        # Prevent access outside the workspace.
+        try:
+            target.relative_to(workspace)
+        except ValueError:
+            return {
+                "success": False,
+                "error": "Path is outside the workspace.",
+            }
+
+        # Refuse to write to an existing directory.
+        if target.exists() and target.is_dir():
+            return {
+                "success": False,
+                "error": f"Path is a directory: {path}",
+            }
+
+        try:
+            target.parent.mkdir(parents=True, exist_ok=True)
+            target.write_text(content, encoding="utf-8")
+        except OSError as exc:
+            return {
+                "success": False,
+                "error": f"Could not write file: {exc}",
+            }
+
+        return {
+            "success": True,
+            "path": path,
+            "message": f"File written successfully: {path}",
+        }
+
+class EditFileTool(Tool):
+    """Replace text in an existing file inside the workspace."""
+
+    name = "edit_file"
+    description = "Replace specific text in an existing file inside the workspace."
+
+    def execute(
+        self,
+        path: str,
+        old_text: str,
+        new_text: str,
+    ) -> dict[str, Any]:
+        """Replace exactly one occurrence of old_text with new_text."""
+
+        settings = get_settings()
+
+        workspace = Path(settings.workspace).resolve()
+        target = (workspace / path).resolve()
+
+        # Prevent access outside the workspace.
+        try:
+            target.relative_to(workspace)
+        except ValueError:
+            return {
+                "success": False,
+                "error": "Path is outside the workspace.",
+            }
+
+        if not target.exists():
+            return {
+                "success": False,
+                "error": f"File does not exist: {path}",
+            }
+
+        if not target.is_file():
+            return {
+                "success": False,
+                "error": f"Path is not a file: {path}",
+            }
+
+        try:
+            content = target.read_text(encoding="utf-8")
+        except UnicodeDecodeError:
+            return {
+                "success": False,
+                "error": f"File is not a UTF-8 text file: {path}",
+            }
+        except OSError as exc:
+            return {
+                "success": False,
+                "error": f"Could not read file: {exc}",
+            }
+
+        occurrences = content.count(old_text)
+
+        if occurrences == 0:
+            return {
+                "success": False,
+                "error": "The specified old_text was not found in the file.",
+            }
+
+        if occurrences > 1:
+            return {
+                "success": False,
+                "error": (
+                    f"old_text appears {occurrences} times. "
+                    "The text must appear exactly once."
+                ),
+            }
+
+        updated_content = content.replace(old_text, new_text, 1)
+
+        try:
+            target.write_text(updated_content, encoding="utf-8")
+        except OSError as exc:
+            return {
+                "success": False,
+                "error": f"Could not write file: {exc}",
+            }
+
+        return {
+            "success": True,
+            "path": path,
+            "message": "File edited successfully.",
+        }
