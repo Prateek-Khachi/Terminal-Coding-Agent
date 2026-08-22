@@ -58,3 +58,57 @@ class ListDirectoryTool(Tool):
             "path": path,
             "entries": entries,
         }
+
+class ReadFileTool(Tool):
+    """Read a text file inside the workspace."""
+
+    name = "read_file"
+    description = "Read the contents of a text file inside the workspace."
+
+    def execute(self, path: str) -> dict[str, Any]:
+        """Read a file and return its contents."""
+
+        settings = get_settings()
+
+        workspace = Path(settings.workspace).resolve()
+        target = (workspace / path).resolve()
+
+        # Prevent access outside the workspace.
+        try:
+            target.relative_to(workspace)
+        except ValueError:
+            return {
+                "success": False,
+                "error": "Path is outside the workspace.",
+            }
+
+        if not target.exists():
+            return {
+                "success": False,
+                "error": f"File does not exist: {path}",
+            }
+
+        if not target.is_file():
+            return {
+                "success": False,
+                "error": f"Path is not a file: {path}",
+            }
+
+        try:
+            content = target.read_text(encoding="utf-8")
+        except UnicodeDecodeError:
+            return {
+                "success": False,
+                "error": f"File is not a UTF-8 text file: {path}",
+            }
+        except OSError as exc:
+            return {
+                "success": False,
+                "error": f"Could not read file: {exc}",
+            }
+
+        return {
+            "success": True,
+            "path": path,
+            "content": content,
+        }
